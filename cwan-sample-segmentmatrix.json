@@ -1,0 +1,627 @@
+{
+    "version": "2025.11",
+    "core-network-configuration": {
+      "vpn-ecmp-support": true,
+      "dns-support": true,
+      "security-group-referencing-support": true,
+      "inside-cidr-blocks": [
+        "10.251.128.0/17"
+      ],
+      "asn-ranges": [
+        "64512-64513"
+      ],
+      "edge-locations": [
+        {
+          "location": "us-east-1",
+          "asn": 64512,
+          "inside-cidr-blocks": [
+            "10.251.128.0/24"
+          ]
+        },
+        {
+          "location": "us-west-2",
+          "asn": 64513,
+          "inside-cidr-blocks": [
+            "10.251.129.0/24"
+          ]
+        }
+      ]
+    },
+    "segments": [
+      {
+        "name": "NPTB1",
+        "description": "Non-Prod Trust Boundary 1 - Lower Non-Trusted Workload",
+        "require-attachment-acceptance": true
+      },
+      {
+        "name": "NPTB2",
+        "description": "Non-Prod Trust Boundary 2 - Lower Shared Services Workload",
+        "require-attachment-acceptance": true
+      },
+      {
+        "name": "NPTB3",
+        "description": "Non-Prod Trust Boundary 3 - Lower Cardholder Data Workload",
+        "require-attachment-acceptance": true
+      },
+      {
+        "name": "NPSDWAN",
+        "description": "Non Prod Environment SD-WAN tunnel-less Connect attachments",
+        "require-attachment-acceptance": true
+      },
+      {
+        "name": "NPCC",
+        "description": "Non Prod Environment cross-cloud connectivity attachments",
+        "require-attachment-acceptance": true
+      },
+      {
+        "name": "PTB1",
+        "description": "Prod Trust Boundary 1 - Prod Non-Trusted Workload",
+        "require-attachment-acceptance": true
+      },
+      {
+        "name": "PTB2",
+        "description": "Prod Trust Boundary 2 - Prod Shared Services Workload",
+        "require-attachment-acceptance": true
+      },
+      {
+        "name": "PTB3",
+        "description": "Prod Trust Boundary 3 - Prod Cardholder Data Workload",
+        "require-attachment-acceptance": true
+      },
+      {
+        "name": "PSDWAN",
+        "description": "Prod Environment SD-WAN tunnel-less Connect attachments",
+        "require-attachment-acceptance": true
+      },
+      {
+        "name": "PCC",
+        "description": "Prod Environment cross-cloud connectivity attachments",
+        "require-attachment-acceptance": true
+      },
+      {
+        "name": "ONPREM",
+        "description": "To land DXG Attachment.  Inspection for ONPREM bound traffic is owned by the Edge Firewall at ONPREM.",
+        "require-attachment-acceptance": true
+      }
+    ],
+    "network-function-groups": [
+      {
+        "name": "NPEWNFG",
+        "description": "Non-Prod East-West Inspection Network Function Group",
+        "require-attachment-acceptance": false
+      },
+      {
+        "name": "PEWNFG",
+        "description": "Production East-West Inspection Network Function Group - also owns the sanctioned non-prod to prod shared services path",
+        "require-attachment-acceptance": false
+      },
+      {
+        "name": "NPNSNFG",
+        "description": "Non-Prod North-South Egress Inspection Network Function Group",
+        "require-attachment-acceptance": false
+      },
+      {
+        "name": "PNSNFG",
+        "description": "Production North-South Egress Inspection Network Function Group",
+        "require-attachment-acceptance": false
+      }
+    ],
+    "segment-actions": [
+      {
+        "action": "share",
+        "mode": "attachment-route",
+        "segment": "ONPREM",
+        "share-with": [
+          "NPTB1",
+          "NPTB2",
+          "NPTB3",
+          "NPSDWAN",
+          "PTB1",
+          "PTB2",
+          "PTB3",
+          "PSDWAN"
+        ]
+      },
+      {
+        "action": "send-via",
+        "segment": "NPTB1",
+        "mode": "dual-hop",
+        "when-sent-to": {
+          "segments": [
+            "NPTB2",
+            "NPSDWAN",
+            "NPCC"
+          ]
+        },
+        "via": {
+          "network-function-groups": [
+            "NPEWNFG"
+          ]
+        }
+      },
+      {
+        "action": "send-via",
+        "segment": "NPTB2",
+        "mode": "dual-hop",
+        "when-sent-to": {
+          "segments": [
+            "NPTB3",
+            "NPSDWAN",
+            "NPCC"
+          ]
+        },
+        "via": {
+          "network-function-groups": [
+            "NPEWNFG"
+          ]
+        }
+      },
+      {
+        "action": "send-via",
+        "segment": "PTB2",
+        "mode": "dual-hop",
+        "when-sent-to": {
+          "segments": [
+            "NPTB1",
+            "NPTB2",
+            "NPSDWAN",
+            "NPCC",
+            "PTB1",
+            "PTB3",
+            "PSDWAN",
+            "PCC"
+          ]
+        },
+        "via": {
+          "network-function-groups": [
+            "PEWNFG"
+          ]
+        }
+      },
+      {
+        "action": "send-via",
+        "segment": "PTB1",
+        "mode": "dual-hop",
+        "when-sent-to": {
+          "segments": [
+            "PSDWAN",
+            "PCC"
+          ]
+        },
+        "via": {
+          "network-function-groups": [
+            "PEWNFG"
+          ]
+        }
+      },
+      {
+        "action": "send-to",
+        "segment": "NPTB1",
+        "via": {
+          "network-function-groups": [
+            "NPNSNFG"
+          ]
+        },
+        "when-sent-to": {
+          "segments": "NPTB1"
+        }
+      },
+      {
+        "action": "send-to",
+        "segment": "NPTB2",
+        "via": {
+          "network-function-groups": [
+            "NPNSNFG"
+          ]
+        },
+        "when-sent-to": {
+          "segments": "NPTB2"
+        }
+      },
+      {
+        "action": "send-to",
+        "segment": "PTB1",
+        "via": {
+          "network-function-groups": [
+            "PNSNFG"
+          ]
+        },
+        "when-sent-to": {
+          "segments": "PTB1"
+        }
+      },
+      {
+        "action": "send-to",
+        "segment": "PTB2",
+        "via": {
+          "network-function-groups": [
+            "PNSNFG"
+          ]
+        },
+        "when-sent-to": {
+          "segments": "PTB2"
+        }
+      }
+    ],
+    "attachment-policies": [
+      {
+        "rule-number": 1,
+        "condition-logic": "and",
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "NFG",
+            "value": "NPEWNFG"
+          }
+        ],
+        "action": {
+          "add-to-network-function-group": "NPEWNFG"
+        }
+      },
+      {
+        "rule-number": 2,
+        "condition-logic": "and",
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "NFG",
+            "value": "PEWNFG"
+          }
+        ],
+        "action": {
+          "add-to-network-function-group": "PEWNFG"
+        }
+      },
+      {
+        "rule-number": 3,
+        "condition-logic": "and",
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "NFG",
+            "value": "NPNSNFG"
+          }
+        ],
+        "action": {
+          "add-to-network-function-group": "NPNSNFG"
+        }
+      },
+      {
+        "rule-number": 4,
+        "condition-logic": "and",
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "NFG",
+            "value": "PNSNFG"
+          }
+        ],
+        "action": {
+          "add-to-network-function-group": "PNSNFG"
+        }
+      },
+      {
+        "rule-number": 5,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "NPCC"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "NPCC"
+        }
+      },
+      {
+        "rule-number": 6,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "NPSDWAN"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "NPSDWAN"
+        }
+      },
+      {
+        "rule-number": 7,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "NPTB1"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "NPTB1"
+        }
+      },
+      {
+        "rule-number": 8,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "NPTB2"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "NPTB2"
+        }
+      },
+      {
+        "rule-number": 9,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "NPTB3"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "NPTB3"
+        }
+      },
+      {
+        "rule-number": 10,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "ONPREM"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "ONPREM"
+        }
+      },
+      {
+        "rule-number": 11,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "PCC"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "PCC"
+        }
+      },
+      {
+        "rule-number": 12,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "PSDWAN"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "PSDWAN"
+        }
+      },
+      {
+        "rule-number": 13,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "PTB1"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "PTB1"
+        }
+      },
+      {
+        "rule-number": 14,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "PTB2"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "PTB2"
+        }
+      },
+      {
+        "rule-number": 15,
+        "conditions": [
+          {
+            "type": "tag-value",
+            "operator": "equals",
+            "key": "segment",
+            "value": "PTB3"
+          }
+        ],
+        "action": {
+          "association-method": "constant",
+          "segment": "PTB3"
+        }
+      }
+    ],
+    "attachment-routing-policy-rules": [
+      {
+        "rule-number": 100,
+        "description": "NPSDWAN Attachment Routing Policy",
+        "edge-locations": [
+          "us-east-1",
+          "us-west-2"
+        ],
+        "conditions": [
+          {
+            "type": "routing-policy-label",
+            "value": "NPSDWANAttachmentRoutingPolicy"
+          }
+        ],
+        "action": {
+          "associate-routing-policies": [
+            "OutboundNPSDWAN"
+          ]
+        }
+      },
+      {
+        "rule-number": 200,
+        "description": "PSDWAN Attachment Routing Policy",
+        "edge-locations": [
+          "us-east-1",
+          "us-west-2"
+        ],
+        "conditions": [
+          {
+            "type": "routing-policy-label",
+            "value": "PSDWANAttachmentRoutingPolicy"
+          }
+        ],
+        "action": {
+          "associate-routing-policies": [
+            "OutboundPSDWAN"
+          ]
+        }
+      }
+    ],
+    "routing-policies": [
+      {
+        "routing-policy-name": "OutboundNPSDWAN",
+        "routing-policy-description": "Set Community Tag on NPSDWAN Attachment - Outbound Routes",
+        "routing-policy-direction": "outbound",
+        "routing-policy-number": 10,
+        "routing-policy-rules": [
+          {
+            "rule-number": 10,
+            "rule-definition": {
+              "match-conditions": [
+                {
+                  "type": "prefix-equals",
+                  "value": "192.168.0.0/22"
+                }
+              ],
+              "condition-logic": "or",
+              "action": {
+                "type": "add-community",
+                "value": "65000:100"
+              }
+            }
+          },
+          {
+            "rule-number": 20,
+            "rule-definition": {
+              "match-conditions": [
+                {
+                  "type": "prefix-equals",
+                  "value": "192.168.4.0/22"
+                }
+              ],
+              "condition-logic": "or",
+              "action": {
+                "type": "add-community",
+                "value": "65000:200"
+              }
+            }
+          },
+          {
+            "rule-number": 30,
+            "rule-definition": {
+              "match-conditions": [
+                {
+                  "type": "prefix-equals",
+                  "value": "192.168.8.0/22"
+                }
+              ],
+              "condition-logic": "or",
+              "action": {
+                "type": "add-community",
+                "value": "65000:300"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "routing-policy-name": "OutboundPSDWAN",
+        "routing-policy-description": "Set Community Tag on PSDWAN Attachment - Outbound Routes",
+        "routing-policy-direction": "outbound",
+        "routing-policy-number": 20,
+        "routing-policy-rules": [
+          {
+            "rule-number": 10,
+            "rule-definition": {
+              "match-conditions": [
+                {
+                  "type": "prefix-equals",
+                  "value": "192.168.12.0/22"
+                }
+              ],
+              "condition-logic": "or",
+              "action": {
+                "type": "add-community",
+                "value": "65001:100"
+              }
+            }
+          },
+          {
+            "rule-number": 20,
+            "rule-definition": {
+              "match-conditions": [
+                {
+                  "type": "prefix-equals",
+                  "value": "192.168.16.0/22"
+                }
+              ],
+              "condition-logic": "or",
+              "action": {
+                "type": "add-community",
+                "value": "65001:200"
+              }
+            }
+          },
+          {
+            "rule-number": 30,
+            "rule-definition": {
+              "match-conditions": [
+                {
+                  "type": "prefix-equals",
+                  "value": "192.168.20.0/22"
+                }
+              ],
+              "condition-logic": "or",
+              "action": {
+                "type": "add-community",
+                "value": "65001:300"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
